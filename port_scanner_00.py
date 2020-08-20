@@ -90,5 +90,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-#remote_serverIP = socket.gethostbyname(remote_server)
