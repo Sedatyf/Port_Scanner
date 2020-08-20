@@ -1,35 +1,52 @@
 import socket
 import termcolor
+import sys
+from datetime import datetime
 
 remote_server = input("Enter a remote host to scan: ")
+remote_serverIP = socket.gethostbyname(remote_server)
 
 def scan(*port):
+    t1 = datetime.now()
     start = 0
     end = 65535
     is_port_found = []
-    
+
     if len(port) == 1:
         end = int(port[0]) + 1
         start = int(port[0])
     elif len(port) == 2:
         start = int(port[0])
         end = int(port[1]) + 1
+
+    try:
+        for port in range(start, end):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex((remote_serverIP, port))
+            if result == 0:
+                text = f"[*] Port {port}"
+                space = 18 - len(text)
+                f = '{0}: {1:>%d}' % (space)
+                termcolor.cprint(f.format(text, "Open"), "green")
+                is_port_found.append(True)
+            else:
+                is_port_found.append(False)
+            sock.close()
+    except KeyboardInterrupt:
+        termcolor.cprint("You pressed Ctrl+C, interrupting process...", "yellow")
+        sys.exit()
+    except socket.gaierror:
+        termcolor.cprint("Hostname could not be resolved. Exiting", "red")
+        sys.exit()
+    except socket.error:
+        termcolor.cprint("Couldn't connect to server. Exiting", "red")
+        sys.exit()
+
+    if True not in is_port_found:
+        termcolor.cprint("None of the provided ports are open", "red")
     
-    for port in range(start, end):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex((remote_server, port))
-        if result == 0:
-            text = f"[*] Port {port}"
-            space = 18 - len(text)
-            f = '{0}: {1:>%d}' % (space)
-            termcolor.cprint(f.format(text, "Open"), "green")
-            is_port_found.append(True)
-        else:
-            is_port_found.append(False)
-        sock.close()
-    
-    if not True in is_port_found:
-        print("None of your ports is open")
+    t2 = datetime.now()
+    print("Scanning Completed in " + str(t2-t1))
 
 def main():
     quit = 0
@@ -66,7 +83,7 @@ def main():
                 scan()
                 quit = 1
             elif user_choice == 4:
-                print("Exit")
+                print("Exiting")
                 quit = 1
             else:
                 termcolor.cprint("\nYou need to choose between options by typing 1,2 or 3\n", "red")
