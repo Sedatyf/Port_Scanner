@@ -1,5 +1,5 @@
 import socket
-import termcolor, tqdm
+import termcolor, progressbar
 import sys, os
 from datetime import datetime
 
@@ -8,7 +8,7 @@ def scan(remote_addr, *port):
     start = 0
     end = 65535
     is_port_found = False
-    port_found = []
+    widgets = [progressbar.FormatCustomText("Scanning "), progressbar.Percentage(), progressbar.Bar("■"), progressbar.ETA()]
 
     if len(port) == 1:
         end = int(port[0]) + 1
@@ -18,18 +18,20 @@ def scan(remote_addr, *port):
         end = int(port[1]) + 1
 
     try:
-        progress_bar = tqdm.tqdm(range(start, end))
         socket.setdefaulttimeout(0.05)
-        for port in progress_bar:
-            progress_bar.set_description("Scanning")
+        bar = progressbar.ProgressBar(widgets=widgets, max_value=end, redirect_stdout=True).start()
+        for port in range(start, end):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             result = sock.connect_ex((remote_addr, port))
             if result == 0:
-                port_found.append(port)
+                text = f"[*] Port {port}"
+                space = 18 - len(text)
+                f = '{0}: {1:>%d}' % (space)
+                termcolor.cprint(f.format(text, "Open"), "green")
                 is_port_found = True
-            else:
-                is_port_found = False
+            bar.update(port + 1)
             sock.close()
+        bar.finish()
     except KeyboardInterrupt:
         termcolor.cprint("You pressed Ctrl+C, interrupting process...", "yellow")
         sys.exit()
@@ -40,13 +42,7 @@ def scan(remote_addr, *port):
         termcolor.cprint("Couldn't connect to server. Exiting", "red")
         sys.exit()
 
-    if is_port_found:
-        for port in port_found:
-            text = f"[*] Port {port}"
-            space = 18 - len(text)
-            f = '{0}: {1:>%d}' % (space)
-            termcolor.cprint(f.format(text, "Open"), "green")
-    else:
+    if not is_port_found:
         termcolor.cprint("None of the provided ports are open", "red")
     
     t2 = datetime.now()
