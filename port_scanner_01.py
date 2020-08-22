@@ -1,13 +1,13 @@
 import socket
 import termcolor, tqdm
-import sys
+import sys, os
 from datetime import datetime
 
 def scan(remote_addr, *port):
     t1 = datetime.now()
     start = 0
     end = 65535
-    is_port_found = []
+    is_port_found = False
     port_found = []
 
     if len(port) == 1:
@@ -26,9 +26,9 @@ def scan(remote_addr, *port):
             result = sock.connect_ex((remote_addr, port))
             if result == 0:
                 port_found.append(port)
-                is_port_found.append(True)
+                is_port_found = True
             else:
-                is_port_found.append(False)
+                is_port_found = False
             sock.close()
     except KeyboardInterrupt:
         termcolor.cprint("You pressed Ctrl+C, interrupting process...", "yellow")
@@ -40,25 +40,25 @@ def scan(remote_addr, *port):
         termcolor.cprint("Couldn't connect to server. Exiting", "red")
         sys.exit()
 
-    if True not in is_port_found:
-        termcolor.cprint("None of the provided ports are open", "red")
-    else:
+    if is_port_found:
         for port in port_found:
             text = f"[*] Port {port}"
             space = 18 - len(text)
             f = '{0}: {1:>%d}' % (space)
             termcolor.cprint(f.format(text, "Open"), "green")
+    else:
+        termcolor.cprint("None of the provided ports are open", "red")
     
     t2 = datetime.now()
     print("Scanning Completed in " + str(t2-t1))
 
 def show_help():
-    print("""Port Scanner
+    print(f"""Port Scanner
     Usage:
-      port_scanner_01.py <remote_address> -p <port>
-      port_scanner_01.py <remote_address> -r <start> <end>
-      port_scanner_01.py <remote_address> -a 
-      port_scanner_01.py -h
+      {os.path.basename(__file__)} <remote_address> -p <port>
+      {os.path.basename(__file__)} <remote_address> -r <start> <end>
+      {os.path.basename(__file__)} <remote_address> -a 
+      {os.path.basename(__file__)} -h
 
     Options:
       -h    Show this screen.
@@ -75,23 +75,23 @@ def main():
         show_help()
         sys.exit()
     else:
-        remote_serverIP = socket.gethostbyname(args[0])
+        remote_server_ip = socket.gethostbyname(args[0])
         print("-" * 60)
-        print("Please wait, scanning remote host " + remote_serverIP)
+        print("Please wait, scanning remote host " + remote_server_ip)
         print("-" * 60)
 
     if "-p" in opts:
         if len(args) == 2:
-            scan(remote_serverIP, args[1])
+            scan(remote_server_ip, args[1])
         else:
             termcolor.cprint("You need to enter a digit to specify your port", "red")
     elif "-r" in opts:
         if len(args) == 3:
-            scan(remote_serverIP, args[1], args[2])
+            scan(remote_server_ip, args[1], args[2])
         else:
             termcolor.cprint("You need to enter two digits to specify range", "red")
     elif "-a" in opts:
-        scan(remote_serverIP)
+        scan(remote_server_ip)
     else:
         raise SystemExit(show_help())
 
