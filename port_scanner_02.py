@@ -4,58 +4,58 @@ import termcolor, progressbar
 import sys, os
 from datetime import datetime
 
+n_threads = 10
+
 class JudgeThread(threading.Thread):
-    def __init__(self, threadIndex, remote_addr):
+    def __init__(self, threadIndex, remote_addr, *port):
         threading.Thread.__init__(self)
         self.index = threadIndex
         self.addr = remote_addr
+        self.ports = port
 
     def run(self):
-        start = self.index
-        end = self.index + 1
+        port_start = self.ports[0]
+        port_end = self.ports[1] + 1
 
         socket.setdefaulttimeout(0.05)
-        for port in range(start, end):
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex((self.addr, port))
-            if result == 0:
-                text = f"[*] Port {port}"
-                space = 18 - len(text)
-                f = '{0}: {1:>%d}' % (space)
-                termcolor.cprint(f.format(text, "Open"), "green")
+        widgets = [progressbar.FormatCustomText("Scanning "), progressbar.Percentage(), progressbar.Bar("■"), progressbar.ETA()]
+        bar = progressbar.ProgressBar(widgets=widgets, max_value=port_end, redirect_stdout=True).start()
+
+        for port in range(port_start, port_end):
+            if port % n_threads == self.index:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                result = sock.connect_ex((self.addr, port))
+                bar.update(port + 1)
+                if result == 0:
+                    text = f"[*] Port {port}"
+                    space = 18 - len(text)
+                    f = '{0}: {1:>%d}' % (space)
+                    termcolor.cprint(f.format(text, "Open"), "green")
+        bar.finish()
 
 def scan(remote_addr, *port):
     t1 = datetime.now()
     
-    start = 1
-    end = 6540
+    port_start = 1
+    port_end = 65535
     is_port_found = False
-    widgets = [progressbar.FormatCustomText("Scanning "), progressbar.Percentage(), progressbar.Bar("■"), progressbar.ETA()]
+
     spawned_threads = []
 
     if len(port) == 1:
-        end = int(port[0]) + 1
-        start = int(port[0])
+        port_end = int(port[0]) + 1
+        port_start = int(port[0])
     elif len(port) == 2:
-        start = int(port[0])
-        end = int(port[1]) + 1
+        port_start = int(port[0])
+        port_end = int(port[1]) + 1
 
     try:
-        bar = progressbar.ProgressBar(widgets=widgets, max_value=end, redirect_stdout=True).start()
-        for i in range(start, end):
-            try:
-                j = i * 10
-                k = j - 9 if j == 10 else j - 10
-                for m in range(k, j+1):
-                    t = JudgeThread(m, remote_addr)
-                    t.start()
-                    spawned_threads.append(t)
-                for t in spawned_threads:
-                    t.join()
-            except OverflowError:
-                break
-            bar.update(i + 1)
-        bar.finish()
+        for i in range(n_threads):
+            t = JudgeThread(i, remote_addr, port_start, port_end)
+            t.start()
+            spawned_threads.append(t)
+        for t in spawned_threads:
+            t.join()
     except KeyboardInterrupt:
         termcolor.cprint("You pressed Ctrl+C, interrupting process...", "yellow")
         sys.exit()
@@ -100,6 +100,7 @@ def main():
         sys.exit()
     else:
         remote_server_ip = socket.gethostbyname(args[0])
+
         print("-" * 60)
         print("Please wait, scanning remote host " + remote_server_ip)
         print("-" * 60)
