@@ -5,6 +5,7 @@ import sys, os
 from datetime import datetime
 
 n_threads = 10
+is_port_found = False
 
 class JudgeThread(threading.Thread):
     def __init__(self, threadIndex, remote_addr, *port):
@@ -16,6 +17,7 @@ class JudgeThread(threading.Thread):
     def run(self):
         port_start = self.ports[0]
         port_end = self.ports[1] + 1
+        global is_port_found
 
         socket.setdefaulttimeout(0.05)
         widgets = [progressbar.FormatCustomText("Scanning "), progressbar.Percentage(), progressbar.Bar("■"), progressbar.ETA()]
@@ -31,6 +33,8 @@ class JudgeThread(threading.Thread):
                     space = 18 - len(text)
                     f = '{0}: {1:>%d}' % (space)
                     termcolor.cprint(f.format(text, "Open"), "green")
+                    is_port_found = True
+
         bar.finish()
 
 def scan(remote_addr, *port):
@@ -38,7 +42,6 @@ def scan(remote_addr, *port):
     
     port_start = 1
     port_end = 65535
-    is_port_found = False
 
     spawned_threads = []
 
