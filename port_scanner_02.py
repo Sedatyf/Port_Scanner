@@ -6,7 +6,7 @@ from datetime import datetime
 
 n_threads = 20
 is_port_found = False
-bar = "temp"
+bar = None
 
 class JudgeThread(threading.Thread):
     def __init__(self, threadIndex, remote_addr, *port):
@@ -19,12 +19,8 @@ class JudgeThread(threading.Thread):
         port_start = self.ports[0]
         port_end = self.ports[1] + 1
         global is_port_found
-        global bar
 
         socket.setdefaulttimeout(0.05)
-
-        widgets = [progressbar.FormatCustomText("Scanning "), progressbar.Percentage(), progressbar.Bar("■"), progressbar.ETA()]
-        bar = progressbar.ProgressBar(widgets=widgets, max_value=port_end, redirect_stdout=True).start()
 
         for port in range(port_start, port_end):
             if port % n_threads == self.index:
@@ -39,11 +35,10 @@ class JudgeThread(threading.Thread):
                     is_port_found = True
 
 
-def scan(remote_addr, *port):
-    t1 = datetime.now()
-    
+def scan(remote_addr, *port):    
     port_start = 1
     port_end = 65535
+    global bar
 
     spawned_threads = []
 
@@ -54,9 +49,12 @@ def scan(remote_addr, *port):
         port_start = int(port[0])
         port_end = int(port[1]) + 1
 
+    widgets = [progressbar.FormatCustomText("Scanning "), progressbar.Percentage(), progressbar.Bar("■"), progressbar.ETA()]
+    bar = progressbar.ProgressBar(widgets=widgets, max_value=port_end, redirect_stdout=True).start()
+
     try:
         for i in range(n_threads):
-            t = JudgeThread(i, remote_addr, port_start, port_end)
+            t = JudgeThread(i, remote_addr, port_start, port_end-1)
             t.start()
             spawned_threads.append(t)
         for t in spawned_threads:
@@ -73,9 +71,7 @@ def scan(remote_addr, *port):
 
     if not is_port_found:
         termcolor.cprint("None of the provided ports are open", "red")
-    
-    t2 = datetime.now()
-    print("Scanning Completed in " + str(t2-t1))
+
 
 def show_help():
     print(f"""Port Scanner
@@ -93,6 +89,8 @@ def show_help():
     """)
 
 def main():
+    t1 = datetime.now()
+
     opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
     args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]
 
@@ -126,6 +124,9 @@ def main():
         raise SystemExit(show_help())
 
     bar.finish()
+        
+    t2 = datetime.now()
+    print("Scanning Completed in " + str(t2-t1))
 
 if __name__ == "__main__":
     main()
