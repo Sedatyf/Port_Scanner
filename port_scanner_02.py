@@ -4,8 +4,9 @@ import termcolor, progressbar
 import sys, os
 from datetime import datetime
 
-n_threads = 10
+n_threads = 20
 is_port_found = False
+bar = "temp"
 
 class JudgeThread(threading.Thread):
     def __init__(self, threadIndex, remote_addr, *port):
@@ -18,8 +19,10 @@ class JudgeThread(threading.Thread):
         port_start = self.ports[0]
         port_end = self.ports[1] + 1
         global is_port_found
+        global bar
 
         socket.setdefaulttimeout(0.05)
+
         widgets = [progressbar.FormatCustomText("Scanning "), progressbar.Percentage(), progressbar.Bar("■"), progressbar.ETA()]
         bar = progressbar.ProgressBar(widgets=widgets, max_value=port_end, redirect_stdout=True).start()
 
@@ -35,7 +38,6 @@ class JudgeThread(threading.Thread):
                     termcolor.cprint(f.format(text, "Open"), "green")
                     is_port_found = True
 
-        bar.finish()
 
 def scan(remote_addr, *port):
     t1 = datetime.now()
@@ -122,6 +124,8 @@ def main():
         scan(remote_server_ip)
     else:
         raise SystemExit(show_help())
+
+    bar.finish()
 
 if __name__ == "__main__":
     main()
