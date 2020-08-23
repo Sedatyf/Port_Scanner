@@ -20,6 +20,8 @@ def scan(*port):
         end = int(port[1]) + 1
 
     try:
+        socket.setdefaulttimeout(0.05)
+
         for port in range(start, end):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             result = sock.connect_ex((remote_serverIP, port))
